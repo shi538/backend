@@ -1,0 +1,20 @@
+{
+  "name": "backend_2",
+  "version": "1.0.0",
+  "description": "a backend add",
+  "homepage": "https://github.com/shi538/backend#readme",
+  "bugs": {
+    "url": "https://github.com/shi538/backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shi538/backend.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
