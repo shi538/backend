@@ -1,6 +1,6 @@
 
-import {app} from './app.js'
-import mongoConnect from './db/index.js';
+import {app} from './src/app.js'
+import mongoConnect from './src/db/index.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
