@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
-import { json } from "express"
+import jwt from "jsonwebtoken"
 const registerUser = asyncHandler(async (req, res) => {
     //This is the algorithm ofthe code
     // get user details from frontend
@@ -102,10 +102,11 @@ const loginUser = asyncHandler(async (req, res) => {
     // 5. Send coookie
 
     const { email, password, username } = req.body;
+      console.log(email)
 
-    if (!email || !username) {
-        throw new ApiError(400, "username or email is required")
-    }
+     if (!email && !username) {
+        throw new ApiError(400, "Username of email is required")
+     }
 
     const user = await User.findOne({
         $or: [{ email }, { username }]
@@ -155,12 +156,13 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     //Delete the refreshToken save for database
     //delete the refresh and access token for the coookies and session
     //and removing the refreshToken for the database again save the data base refreshtoken is undefined
+        console.log(req.user)
 
     await User.findByIdAndUpdate(
         req.user._id,
         {
             $set: {
-                refreshToken: undefined
+                refreshToken: ""
             }
         },
         {
@@ -181,13 +183,54 @@ const logoutUser = asyncHandler(async (req, res, next) => {
             new ApiResponse(
                 200,
                 {},
-                "User LoggedIn Successfully"
+                "User LoggedOut Successfully"
             )
         )
 })
 
+const refreshAccessToken = asyncHandler( async (req, res) =>{
+    // 1. Take the refreshToken for the cookies
+    // 2. check refreshtoken is receve or not
+    // 3. third verify the refresh token 
+    // 4. find the user for giving refreshtoken 
+    // 5. find the value of the refreshtoken is save the database
+    // 4. check the value of the database refreshToken and cookies refreshToken is same
+    // 5. again call the genereateAccessTokenAndRefreshToken function and receve the value of the accessToken and refreshToken
+    // 6. And again save the value of the receving accessToken and refreshToken for the cookies
+    const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+
+    if (!incomingRefreshToken) {
+        throw new ApiError(400, "Not provide the incoming refresh token")
+    }
+
+    const decodedRefreshToken = jwt.verify(incomingRefreshToken, REFRESH_TOKEN_SECRET)
+
+    if (!decodedRefreshToken) {
+        throw new ApiError(401, "Decoded RefreshToken is not  Provide")
+    }
+
+    const user = await User.findById(decodedRefreshToken._id).select(" -password -refreshToken")
+
+    const {accessToken, refreshToken} = await generateAccessTokenAndRefresh(user._id)
+          
+    const options = {
+        httpOnly:true,
+        secure:true
+    }
+    res
+    .status(200)
+    .json(
+        cookie(accessToken, options),
+        cookie(refreshToken, options),
+        new ApiResponse(201, "Access Token is created SuccessFully")
+    )
+})
+  
+
+ 
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }
