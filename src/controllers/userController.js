@@ -352,9 +352,9 @@ const updateAvatar = asyncHandler(async (req, res) => {
 const updateCoverImage = asyncHandler(async (req, res) => {
     // 1. Take the Localfile Path for req.file
     // 2. Check the value is localPath is provide or not
-    // 3. upload the localFilePathfor cloudinary and receve the original url for the file
+    // 3. upload the localFilePath for cloudinary and receve the original url for the file
     // 4. check the value of the url is provide or not
-    // 5. find the user for req.user._id and update the value of the avatatr is avatar.url and save the value
+    // 5. find the user for req.user._id and update the value of the avatatr is coverImage.url and save the value
 
     const coverImageLocalPath = req.file?.path
 
