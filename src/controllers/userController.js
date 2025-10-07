@@ -306,7 +306,7 @@ const updateAccoutDetails = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(
-            new ApiResponse(200, user, "Account Details is Updated")
+            new ApiResponse(200, user, true, "Account Details is Updated")
         )
 
 })
