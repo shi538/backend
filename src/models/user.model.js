@@ -35,10 +35,12 @@ const userSchema = new Schema(
         coverImage: {
             type: String,//cloudinary url
         },
-        watchHistory: {
-            type: Schema.Types.ObjectId,
-            ref: "Video"
-        },
+        watchHistory: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "Video"
+            }
+        ],
         password: {
             type: String,
             required: [true, 'Password is Required']
@@ -62,7 +64,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 }
 
 userSchema.methods.generateAccessToken = function () {
-     const accessToken = jwt.sign(
+    const accessToken = jwt.sign(
         {
             _id: this._id,
             email: this.email,

@@ -41,8 +41,8 @@ const registerUser = asyncHandler(async (req, res) => {
     }
     console.log(req.files)
 
-    const avatarLocalPath = req.files?.avatar?.[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
+    const avatarLocalPath = req.files?.avatar[0]?.path;
+    const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
     if (!avatarLocalPath) {
         throw new ApiError(400, "avatar file is required")
@@ -162,8 +162,8 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: ""
+            $unset: {
+                refreshToken: 1
             }
         },
         {
@@ -199,16 +199,16 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     // 5. again call the genereateAccessTokenAndRefreshToken function and receve the value of the accessToken and refreshToken
     // 6. And again save the value of the receving accessToken and refreshToken for the cookies
     try {
-        const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+        const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
         if (!incomingRefreshToken) {
             throw new ApiError(400, "Not provide the incoming refresh token")
         }
 
-        const decodedRefreshToken = jwt.verify(incomingRefreshToken, REFRESH_TOKEN_SECRET)
+        const decodedRefreshToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
 
         if (!decodedRefreshToken) {
-            throw new ApiError(401, "Decoded RefreshToken is not  Provide")
+            throw new ApiError(402, "Decoded RefreshToken is not  Provide")
         }
 
         const user = await User.findById(decodedRefreshToken._id).select(" -password -refreshToken")
@@ -221,10 +221,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         }
         res
             .status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", refreshToken, options)
             .json(
-                cookie(accessToken, options),
-                cookie(refreshToken, options),
-                new ApiResponse(201, "Access Token is created SuccessFully")
+               
+                new ApiResponse(201, {accessToken, refreshToken}, true, "Access Token is created SuccessFully")
             )
     } catch (error) {
         throw new ApiError(401, error?.message, "After Expire the AccessToken in not generate again")
@@ -264,12 +265,13 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
         user.password = newPassword;
 
-        await user.save({ validateBeforeSave: false })
+         await user.save({ validateBeforeSave: false })
+         const afterchangingthePassword =await User.findById(user._id).select("-password -refreshToken")
 
         return res
             .status(200)
             .json(
-                new ApiResponse(201, {}, "Password is Updated Successfully")
+                new ApiResponse(201, afterchangingthePassword, "Password is Updated Successfully")
             )
     } catch (error) {
         throw new ApiError(401, error?.message, "Password is not change")
@@ -280,7 +282,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
     return res
         .status(200)
-        .json(200, req.user, "Current user fetched successfully")
+        .json(
+            new ApiResponse(200, req.user, true, "Current user fetched successfully")
+        )
 })
 
 const updateAccoutDetails = asyncHandler(async (req, res) => {
@@ -364,7 +368,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
         throw new ApiError(401, "coverImage file is Missing")
     }
 
-    const coverImage = await uploadOnCloudinary(avatarLocalPath);
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
     if (!coverImage.url) {
         throw new ApiError(400, "Error while uploading the coverImage file in cloudianary")
@@ -456,19 +460,19 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     if (!channel?.length) {
         throw new ApiError(404, "Channel does not find")
     }
-    
+
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, "User profile is fetched Successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, channel[0], true,"User profile is fetched Successfully")
+        )
 
 })
 
-const getWatchHistory = asyncHandler( async(req, res) => {
+const getWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
         {
-            $watch: {
+            $match: {
                 _id: new mongoose.Types.ObjectId(req.user?._id)
             }
         },
@@ -477,7 +481,7 @@ const getWatchHistory = asyncHandler( async(req, res) => {
                 from: "videos",
                 localField: "watchHistory",
                 foreignField: "_id",
-                as:"watchHistory",
+                as: "watchHistory",
                 pipeline: [
                     {
                         $lookup: {
@@ -490,7 +494,7 @@ const getWatchHistory = asyncHandler( async(req, res) => {
                                     $project: {
                                         fullName: 1,
                                         username: 1,
-                                        avatar:1
+                                        avatar: 1
                                     }
                                 }
                             ]
@@ -500,7 +504,7 @@ const getWatchHistory = asyncHandler( async(req, res) => {
                         $addFields: {
                             owner: {
                                 $first: "$owner"
-                            }  
+                            }
                         }
                     }
                 ]
@@ -509,10 +513,10 @@ const getWatchHistory = asyncHandler( async(req, res) => {
     ])
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200, user[0].watchHistory, true,"Watch hitory fetched successfully" )
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200,  user[0].watchHistory,true, "Watch hitory fetched successfully")
+        )
 })
 
 
