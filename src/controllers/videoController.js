@@ -128,7 +128,7 @@ const publishVideo = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(
-                new ApiResponse(201, video, true, "Image is successfully uploaded")
+                new ApiResponse(201, video, true, "Video is successfully uploaded")
             )
 
 
