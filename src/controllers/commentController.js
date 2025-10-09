@@ -5,19 +5,18 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const getVideoComments = asyncHandler(async (req, res) => {
-    //TODO: get all comments for a video
     try {
         const { videoId } = req.params
         const { page = 1, limit = 10 } = req.query
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
-    
-    
-    
+
+
+
         const comments = await Comment.aggregate([
             {
                 $match: {
-                    _id: new mongoose.Types.ObjectId(videoId)
+                    video: new mongoose.Types.ObjectId(videoId)
                 }
             },
             {
@@ -25,59 +24,69 @@ const getVideoComments = asyncHandler(async (req, res) => {
                     from: "videos",
                     localField: "video",
                     foreignField: "_id",
-                    as: "video"
+                    as: "video",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1
+                            }
+                        }
+                    ]
                 },
-    
+
             },
             {
                 $lookup: {
-                    from :"users",
+                    from: "users",
                     localField: "owner",
                     foreignField: "_id",
-                    as:"owner"
+                    as: "owner",
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1
+                            }
+                        }
+                    ]
                 }
             },
-            {$unwind:"$video"},
-            {$unwind:"$owner"},
-            {$skip: (pageNum-1)*limit},
-            {$limit: limitNum},
+            { $unwind: "$video" }, //Without this owner Tke the value is Array format
+            { $unwind: "$owner" },
+            { $skip: (pageNum - 1) * limit },
+            { $limit: limitNum },
             {
                 $project: {
-                    content:1,
-                    video:1,
-                    owner:1,
+                    content: 1,
+                    video: 1,
+                    owner: 1,
                 }
             }
-    
+
         ])
 
         if (!comments) {
             throw new ApiError(500, "Comment can not found")
         }
-    
-        const totlalComment = Comment.countDocument(
-            {
-                $match: {
-                    _id:new mongoose.Types.ObjectId
-                }
-            }
-        )
-    
-        const totalPages = Math.ceil(totlalComment/limitNum);
-    
+
+        const totalComments = await Comment.countDocuments({
+            video: new mongoose.Types.ObjectId(videoId)
+        });
+
+        const totalPages = Math.ceil(totalComments / limitNum);
+
         return res
             .status(200)
             .json(
                 {
-                    success:true,
-                    totlalComment,
+                    success: true,
+                    totalComments,
                     totalPages,
                     currentPage: pageNum,
                     comments
                 }
             )
     } catch (error) {
-        throw new ApiError(404, "Comment not found")
+        throw new ApiError(404, error?.message, "Comment not found")
     }
 
 })
@@ -130,6 +139,8 @@ const updateComment = asyncHandler(async (req, res) => {
             }
         )
 
+        const updatingcommit = await Comment.findById(comment._id)
+
         if (!comment) {
             throw new ApiError(500, "Comment can not be find")
         }
@@ -137,7 +148,7 @@ const updateComment = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(
-                new ApiResponse(200, comment, true, "Commnet is successfully updated")
+                new ApiResponse(200, updatingcommit, true, "Commnet is successfully updated")
             )
     } catch (error) {
         throw new ApiError(404, error?.message, "Comment can not updated")
