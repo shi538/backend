@@ -27,12 +27,14 @@ import VideoRouter from "./routes/videoRouter.js"
 import CommentRouter from "./routes/commentRouter.js"
 import LikeRouter from "./routes/likeRouter.js"
 import TweetRouter from "./routes/tweetRouter.js"
+import PlaylistRouter from "./routes/playlistRouter.js"
 //router declaration
 app.use("/api/v1/users", UserRouter);
 app.use("/api/v1/users", VideoRouter);
 app.use("/api/v1/users", CommentRouter);
 app.use("/api/v1/users",LikeRouter)
 app.use("/api/v1/users",TweetRouter)
+app.use("/api/v1/users",PlaylistRouter)
 
 
 export {app};
