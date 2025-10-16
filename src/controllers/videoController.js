@@ -1,4 +1,5 @@
 import { Video } from "../models/video.model.js";
+import { View } from "../models/views.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -141,9 +142,11 @@ const publishVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req?.params;
+    console.log(req.user._id)
+
     try {
 
-        const video = await Video.aggregate([
+        const videoData = await Video.aggregate([
             {
                 $match: {
                     _id: new mongoose.Types.ObjectId(videoId)
@@ -167,7 +170,8 @@ const getVideoById = asyncHandler(async (req, res) => {
                 },
 
             },
-           { $unwind: "$owner" },
+            { $unwind: "$owner" },
+
             {
                 $project: {
                     _id: 1,
@@ -177,8 +181,8 @@ const getVideoById = asyncHandler(async (req, res) => {
                     title: 1,
                     description: 1,
                     duration: 1,
+                    likes: 1,
                     views: 1,
-                    likes:1,
                     isPublished: 1,
                     createdAt: 1,
                     updatedAt: 1
@@ -187,14 +191,56 @@ const getVideoById = asyncHandler(async (req, res) => {
 
         ])
 
-        if (!video) {
+
+        if (!videoData) {
             throw new ApiError(401, "Video Can not be found please choose the right video")
         }
+
+        const video = videoData[0];
+        const upv = await Video.findById(videoId)
+
+
+        if (req.user?._id) {
+
+            const existingView = await View.findOne({
+                video: new mongoose.Types.ObjectId(videoId),
+                viewedBy: new mongoose.Types.ObjectId(req.user?._id)
+            })
+
+
+            if (!existingView) {
+                await View.create({
+                    video: videoId,
+                    viewedBy: req.user?._id,
+                })
+
+                upv.views = upv.views+1;
+                await upv.save()
+
+                console.log(upv)
+
+                // const upv = await Video.findByIdAndUpdate(videoId, {
+                //     $inc: { views: 1 }
+
+                // }
+
+                // )
+                // console.log(upv)
+
+            }
+        } else {
+            await Video.findByIdAndUpdate(
+                videoId, {
+                $inc: { views: 1 }
+            }
+            )
+        }
+
 
         return res
             .status(200)
             .json(
-                new ApiResponse(201, video[0], true, "Video is successfull find")
+                new ApiResponse(201, video, true, "Video is successfull find")
             )
     } catch (error) {
         throw new ApiError(404, error?.message, "Video can not be find")
@@ -219,7 +265,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
                 new ApiResponse(200, {}, true, "Video is successfully deleted")
             )
     } catch (error) {
-        throw new ApiError(401,error?.message, "Video can not be deleted")
+        throw new ApiError(401, error?.message, "Video can not be deleted")
     }
 })
 
