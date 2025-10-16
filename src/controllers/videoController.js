@@ -142,11 +142,90 @@ const publishVideo = asyncHandler(async (req, res) => {
 
 const getVideoById = asyncHandler(async (req, res) => {
     const { videoId } = req?.params;
-    console.log(req.user._id)
 
     try {
 
-        const videoData = await Video.aggregate([
+        // let videoData = await Video.aggregate([
+        //     {
+        //         $match: {
+        //             _id: new mongoose.Types.ObjectId(videoId)
+        //         }
+        //     },
+        //     {
+        //         $lookup: {
+        //             from: "users",
+        //             localField: "owner",
+        //             foreignField: "_id",
+        //             as: "owner",
+        //             pipeline: [
+        //                 {
+        //                     $project: {
+        //                         fullName: 1,
+        //                         username: 1,
+        //                         avatar: 1,
+        //                     }
+        //                 }
+        //             ]
+        //         },
+
+        //     },
+        //     { $unwind: "$owner" },
+
+        //     {
+        //         $project: {
+        //             _id: 1,
+        //             videoFile: 1,
+        //             thumbnail: 1,
+        //             owner: 1,
+        //             title: 1,
+        //             description: 1,
+        //             duration: 1,
+        //             likes: 1,
+        //             views: 1,
+        //             isPublished: 1,
+        //             createdAt: 1,
+        //             updatedAt: 1
+        //         }
+        //     }
+        // ])
+
+
+        // if (!videoData) {
+        //     throw new ApiError(401, "Video Can not be found please choose the right video")
+        // }
+
+        // let video = videoData[0];
+        let shouldIncreaseView = false;
+
+        if (req.user?._id) {
+
+            const existingView = await View.findOne({
+                video: new mongoose.Types.ObjectId(videoId),
+                viewedBy: new mongoose.Types.ObjectId(req.user?._id)
+            })
+
+
+            if (!existingView) {
+                await View.create({
+                    video: videoId,
+                    viewedBy: req.user?._id,
+                })
+                shouldIncreaseView = true;
+
+            }
+        } else {
+            shouldIncreaseView = true;
+        }
+
+        if (shouldIncreaseView) {
+            await Video.findByIdAndUpdate(
+                videoId, {
+                $inc: { views: 1 }
+            }
+            )
+        }
+
+        const updatedVideo = await Video.aggregate([
             {
                 $match: {
                     _id: new mongoose.Types.ObjectId(videoId)
@@ -188,59 +267,17 @@ const getVideoById = asyncHandler(async (req, res) => {
                     updatedAt: 1
                 }
             }
-
         ])
 
-
-        if (!videoData) {
-            throw new ApiError(401, "Video Can not be found please choose the right video")
-        }
-
-        const video = videoData[0];
-        const upv = await Video.findById(videoId)
-
-
-        if (req.user?._id) {
-
-            const existingView = await View.findOne({
-                video: new mongoose.Types.ObjectId(videoId),
-                viewedBy: new mongoose.Types.ObjectId(req.user?._id)
-            })
-
-
-            if (!existingView) {
-                await View.create({
-                    video: videoId,
-                    viewedBy: req.user?._id,
-                })
-
-                upv.views = upv.views+1;
-                await upv.save()
-
-                console.log(upv)
-
-                // const upv = await Video.findByIdAndUpdate(videoId, {
-                //     $inc: { views: 1 }
-
-                // }
-
-                // )
-                // console.log(upv)
-
-            }
-        } else {
-            await Video.findByIdAndUpdate(
-                videoId, {
-                $inc: { views: 1 }
-            }
-            )
+        if (!updatedVideo) {
+            throw new ApiError(500, "Updated video can not be found")
         }
 
 
         return res
             .status(200)
             .json(
-                new ApiResponse(201, video, true, "Video is successfull find")
+                new ApiResponse(201, updatedVideo, true, "Video is successfull find")
             )
     } catch (error) {
         throw new ApiError(404, error?.message, "Video can not be find")
