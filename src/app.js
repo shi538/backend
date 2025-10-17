@@ -30,15 +30,17 @@ import TweetRouter from "./routes/tweetRouter.js"
 import PlaylistRouter from "./routes/playlistRouter.js"
 import SubscriptionRouter from "./routes/subscriptionRouter.js"
 import DashboardRouter from "./routes/dashboardRouter.js"
+import SearchbarRouter from "./routes/searchbarRouter.js"
 //router declaration
 app.use("/api/v1/users", UserRouter);
 app.use("/api/v1/users", VideoRouter);
 app.use("/api/v1/users", CommentRouter);
-app.use("/api/v1/users",LikeRouter)
-app.use("/api/v1/users",TweetRouter)
-app.use("/api/v1/users",PlaylistRouter)
-app.use("/api/v1/users",SubscriptionRouter)
-app.use("/api/v1/users",DashboardRouter)
+app.use("/api/v1/users",LikeRouter);
+app.use("/api/v1/users",TweetRouter);
+app.use("/api/v1/users",PlaylistRouter);
+app.use("/api/v1/users",SubscriptionRouter);
+app.use("/api/v1/users",DashboardRouter);
+app.use("/api/v1/users",SearchbarRouter);
 
 
 export {app};

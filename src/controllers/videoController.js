@@ -273,7 +273,6 @@ const getVideoById = asyncHandler(async (req, res) => {
             throw new ApiError(500, "Updated video can not be found")
         }
 
-
         return res
             .status(200)
             .json(
