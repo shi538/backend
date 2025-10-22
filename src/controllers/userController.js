@@ -4,6 +4,8 @@ import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
+import nodemailer from "nodemailer";
+import NodeCache from "node-cache";
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
 const registerUser = asyncHandler(async (req, res) => {
@@ -523,6 +525,110 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         )
 })
 
+const otpCache = new NodeCache({stdTTL: 300})
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.USER_EMAIL,
+        pass: process.env.GMAIL_APP_PASSWORD,
+    }
+});
+
+const forgotPassword = asyncHandler( async(req, res) => {
+
+  try {
+      const {email} = req.body;
+  
+      const otp = Math.floor(100000+ Math.random()*900000);
+  
+      otpCache.set(email, otp);
+  
+      await  transporter.sendMail({
+          from: process.env.USER_EMAIL,
+          to: email,
+          subject: "Your OTP for Pasword Reset",
+          text: `Your OTP is ${otp}. It expired in 5 minutes`
+      })
+  
+      return res
+      .status(200)
+      .json(
+        new ApiResponse(200, true, "Otp is successflly send to the user email,")
+      )
+  
+  } catch (error) {
+    throw new ApiError(500, error?.message, "forgot-paswword request can not be send")
+  }
+})
+
+
+const verifyOtp = asyncHandler( async(req, res) => {
+    const {email, otp} = req.body;
+
+    const cachedOtp = otpCache.get(email);
+    console.log(cachedOtp);
+
+    if (!cachedOtp) {
+        throw new ApiError(404, "Your email is incorrect for the otp getting")
+    }
+
+    if (parseInt(otp) !== cachedOtp) {
+        throw new ApiError(
+            404, "Your otp is mismatched"
+        )
+    }
+
+    otpCache.del(email)
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse
+    )
+
+})
+
+const updatePassword = asyncHandler(async(req, res, next) => {
+    const {email, password} = req.body;
+
+    if (!email) {
+        throw new ApiError(500, "Please Input a valid email")
+    };
+
+    const user = await User.findOne({
+        email: email,
+    });
+    // const user2 = await User.findByIdAndUpdate(
+    //     user._id,
+    //     {
+    //         $set: {
+    //             password:password
+    //         }
+    //     },
+    //     {
+    //         new:true
+    //     }
+    // )
+
+     user.password = password;
+
+     const updatedUser = await user.save({ validateBeforeSave: false });
+    // loginUser(email, password)
+
+
+     return res
+     .status(200)
+     .json(
+        new ApiResponse(
+            200,
+            updatedUser,
+            true,
+            "Password is successfully updated and user is successfully loggedIn"
+        )
+     )
+})
+
 
 export {
     registerUser,
@@ -535,5 +641,9 @@ export {
     updateAvatar,
     updateCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    forgotPassword,
+    verifyOtp,
+    updatePassword
+
 }

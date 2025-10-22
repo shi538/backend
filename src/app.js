@@ -35,12 +35,12 @@ import SearchbarRouter from "./routes/searchbarRouter.js"
 app.use("/api/v1/users", UserRouter);
 app.use("/api/v1/users", VideoRouter);
 app.use("/api/v1/users", CommentRouter);
-app.use("/api/v1/users",LikeRouter);
-app.use("/api/v1/users",TweetRouter);
-app.use("/api/v1/users",PlaylistRouter);
-app.use("/api/v1/users",SubscriptionRouter);
-app.use("/api/v1/users",DashboardRouter);
-app.use("/api/v1/users",SearchbarRouter);
+app.use("/api/v1/users", LikeRouter);
+app.use("/api/v1/users", TweetRouter);
+app.use("/api/v1/users", PlaylistRouter);
+app.use("/api/v1/users", SubscriptionRouter);
+app.use("/api/v1/users", DashboardRouter);
+app.use("/api/v1/users", SearchbarRouter);
 
 
 export {app};
